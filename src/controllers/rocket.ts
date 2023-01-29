@@ -4,7 +4,8 @@ import { MultipartFile, MultipartValue } from "@fastify/multipart";
 import * as fs from "fs";
 import { randomUUID } from "crypto";
 
-interface RocketData {
+interface IRocketFormData {
+  id?: MultipartValue<number>;
   name: MultipartValue<string>;
   description: MultipartValue<string>;
   height: MultipartValue<number>;
@@ -14,92 +15,117 @@ interface RocketData {
 }
 
 export const createRocket: RouteHandlerMethod = async (request, reply) => {
-  const { name, description, height, diameter, mass, photo } = request.body as RocketData;
+  try {
+    const { name, description, height, diameter, mass, photo } =
+      request.body as IRocketFormData;
 
-  const repository = request.server.db.getRepository(Rocket);
+    const repository = request.server.db.getRepository(Rocket);
 
-  let path = '';
-  if (photo) {
-    const buffer = await photo.toBuffer();
-    path = `uploads/images/gallery/${randomUUID() + "_" + photo.filename}`;
+    let path = "";
+    if (photo) {
+      const buffer = await photo.toBuffer();
+      path = `uploads/images/gallery/${randomUUID() + "_" + photo.filename}`;
 
-    fs.appendFileSync(`storage/${path}`, buffer);
+      fs.appendFileSync(`storage/${path}`, buffer);
+    }
+
+    const data = repository.create({
+      name: name.value,
+      description: description.value,
+      height: height.value,
+      diameter: diameter.value,
+      mass: mass.value,
+      photo: path,
+    });
+
+    const rocket = await repository.save(data);
+
+    return rocket;
+  } catch (error: any) {
+    reply.internalServerError(error);
   }
-
-  const newRocket = repository.create({
-    name: name.value,
-    description: description.value,
-    height: height.value,
-    diameter: diameter.value,
-    mass: mass.value,
-    photo: path,
-  });
-
-  const { id } = await repository.save(newRocket);
-
-  return await repository.findOne({
-    where: { id }
-  });
-}
-
-export const updateRocket: RouteHandlerMethod = async (request, reply) => {
-  const {
-    name,
-    description,
-    height,
-    diameter,
-    mass,
-    photo,
-  } = <RocketData>request.body;
-
-  const { rocketId } = request.params as { rocketId: number };
-
-  const repository = request.server.db.getRepository(Rocket);;
-  const rocket = await repository.findOne({ 
-    where: {id: rocketId}
-  });
-
-  if (!rocket) {
-    reply.notFound("Rocket not found!")
-    return;
-  }
-
-  let path = rocket.photo;
-
-  if (photo) {
-    const buffer = await photo.toBuffer();
-
-    path = `uploads/images/avatars/${randomUUID() + "_" + photo.filename}`;
-
-    fs.appendFileSync(`storage/${path}`, buffer);
-
-    path = "assets/" + path;
-  }
-
-  const newRocket = {
-    name: name.value,
-    description: description.value,
-    height: height.value,
-    diameter: diameter.value,
-    mass: mass.value,
-    photo: path,
-  }
-
-  const updated = await repository.save(newRocket);
-
-  reply.send(updated);
 };
 
-export const rocketList: RouteHandlerMethod = async (request, reply) => {
+export const updateRocket: RouteHandlerMethod = async (request, reply) => {
+  try {
+    const repository = request.server.db.getRepository(Rocket);
+
+    const { id } = request.params as { id: number };
+
+    const rocket = await repository.findOne({ where: { id } });
+
+    if (rocket === null) throw new Error("Rocket with the id not found!");
+
+    const { name, description, height, diameter, mass, photo } =
+      request.body as IRocketFormData;
+
+    let path = "";
+    if (photo) {
+      const buffer = await photo.toBuffer();
+      path = `uploads/images/gallery/${randomUUID() + "_" + photo.filename}`;
+
+      fs.appendFileSync(`storage/${path}`, buffer);
+    }
+
+    const data = {
+      name: name.value,
+      description: description.value,
+      height: height.value,
+      diameter: diameter.value,
+      mass: mass.value,
+      photo: path,
+    };
+
+    await repository.update({ id }, data);
+
+    return { ...data, id };
+  } catch (error: any) {
+    reply.internalServerError(error);
+  }
+};
+
+export const getRockets: RouteHandlerMethod = async (request, reply) => {
+  try {
+    const repository = request.server.db.getRepository(Rocket);
+
+    const rockets = await repository.find({ order: { id: "ASC" } });
+
+    return rockets;
+  } catch (error: any) {
+    reply.internalServerError(error);
+  }
+};
+
+export const getRocket: RouteHandlerMethod = async (request, reply) => {
   const repository = request.server.db.getRepository(Rocket);
 
-  return await repository.find();
-}
+  const { id } = request.params as { id: number };
+
+  try {
+    const rocket = await repository.findOne({ where: { id } });
+
+    if (rocket === null) throw new Error("Rocket with the id not found!");
+
+    return rocket;
+  } catch (error: any) {
+    reply.internalServerError(error);
+  }
+};
 
 export const deleteRocket: RouteHandlerMethod = async (request, reply) => {
   const repository = request.server.db.getRepository(Rocket);
 
-  const { rocketId } =  request.params as { rocketId: number };
+  const { id } = request.params as { id: number };
 
-  return await repository.delete(rocketId)
-}
+  try {
+    const rocket = await repository.findOne({ where: { id } });
+
+    if (rocket === null) throw new Error("Rocket with the id not found!");
+
+    await repository.delete(id);
+
+    return id;
+  } catch (error: any) {
+    reply.internalServerError(error);
+  }
+};

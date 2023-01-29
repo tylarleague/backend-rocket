@@ -4,12 +4,12 @@ import { errorSchemas, fileSchema } from "./common";
 const rocketSchema = {
   type: "object",
   properties: {
-    id: { type: "string" },
+    id: { type: "number" },
     name: { type: "string" },
     description: { type: "string" },
-    height: { type: "number"},
-    diameter: { type: "number"},
-    mass: { type: "number"},
+    height: { type: "number" },
+    diameter: { type: "number" },
+    mass: { type: "number" },
     photo: { type: "string" },
   },
 };
@@ -23,7 +23,7 @@ export const getRocketSchema: FastifySchema = {
 export const putRocketSchema: FastifySchema = {
   body: {
     type: "object",
-    required: ["name", "description", "height", "diameter","mass"],
+    required: ["name", "description", "height", "diameter", "mass"],
     properties: {
       name: {
         type: "object",

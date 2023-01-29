@@ -1,17 +1,3 @@
-export const headers = {
-  withAuthorization: {
-    type: "object",
-    additionalProperties: true,
-    required: ["Authorization"],
-    properties: {
-      Authorization: {
-        description: "The x-auth-token generated after successful login",
-        type: "string",
-      },
-    },
-  },
-};
-
 const validationErrorSchema = {
   type: "object",
   properties: {
@@ -68,5 +54,3 @@ export const fileSchema = {
     },
   },
 };
-
-export const idSchema = { type: "string" };
