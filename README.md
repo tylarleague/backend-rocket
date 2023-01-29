@@ -5,7 +5,7 @@
 - Fastify
 - PostgreSQL
 - TypeORM
-- TypeScriopt
+- TypeScript
 
 ## Installation & Usage
 
